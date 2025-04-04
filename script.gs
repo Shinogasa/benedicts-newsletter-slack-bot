@@ -2,7 +2,7 @@
 const SCRIPT_PROPERTIES = PropertiesService.getScriptProperties();
 const GEMINI_API_KEY = SCRIPT_PROPERTIES.getProperty('GEMINI_API_KEY');
 const SENDER_EMAIL = 'list@ben-evans.com'; // ★★★ 送信元メールアドレスに書き換えてください ★★★
-const SLACK_CHANNEL = '#bw_times_shinonome'; // ★★★ チャンネルIDを指定 ★★★
+const SLACK_CHANNEL = SCRIPT_PROPERTIES.getProperty('YOUR_SLACK_CHANNEL_ID');
 
 // Gemini APIのエンドポイント (text-onlyモデルの場合)
 const GEMINI_API_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
@@ -84,13 +84,15 @@ function callGeminiApi(textToProcess) {
 # 指示
 1. まず、メールマガジン全文を自然な日本語に翻訳してください。
 2. そしてメールマガジン内にURLがあった場合は取り除いてください。
-3. 次に、翻訳した内容に基づいて、メールマガジンに含まれる複数の主要なトピックを特定し、それぞれのトピックについて最も重要なポイントを日本語で数行ずつ（全体で300文字程度を目安に）要約してください。箇条書き形式が望ましいです。
-4. 最後に、以下のJSON形式（マークダウン記法なしの純粋なJSON）で、翻訳結果と要約結果のみを返してください。
+3. 次に、翻訳した内容に基づいて、メールマガジンに含まれる複数の主要なトピックを特定し、それぞれのトピックについて最も重要なポイントを日本語で数行ずつ（全体で300文字程度を目安に）要約してください。
+4. 要約は箇条書き形式で、各要点の見出しは Slack 向けのマークアップで *見出し:* という形式にしてください（アスタリスク1つで囲む）。例：「* AI開発の進展:* AIモデルが急速に進歩しています」
+5. 見出しの記載をしたら改行をしてから要約文を続け(例: * AI開発の進展:*\n)、要約文の次は空白行を入れて見やすくしてください。
+6. 最後に、以下のJSON形式（マークダウン記法なしの純粋なJSON）で、翻訳結果と要約結果のみを返してください。
 
 \`\`\`json
 {
   "translation": "ここに日本語の全文翻訳を入れてください",
-  "summary": "ここに日本語の要約を入れてください"
+  "summary": "ここに日本語の要約を入れてください（各見出しは *見出し:* の形式）"
 }
 \`\`\`
 
@@ -103,12 +105,7 @@ ${textToProcess}
       parts: [{
         text: prompt
       }]
-    }],
-    // 必要に応じて safetySettings や generationConfig を追加
-    // generationConfig: {
-    //   "temperature": 0.7,
-    //   "maxOutputTokens": 2048, // 出力トークン数上限
-    // }
+    }]
   };
 
   const options = {
@@ -237,6 +234,31 @@ function getFormattedDateYesterday() {
   return `${year}/${month}/${day}`;
 }
 
+/**
+ * 要約テキストをSlack用にフォーマットする
+ * Slackでは *テキスト* で太字になります
+ * @param {string} summary 要約テキスト
+ * @return {string} Slack用にフォーマットされた要約テキスト
+ */
+function formatSummaryForSlack(summary) {
+  // 行ごとに分割
+  const lines = summary.split('\n');
+  const formattedLines = [];
+  
+  for (const line of lines) {
+    // 各行を確認
+    if (line.startsWith('・**') && line.includes(':**')) {
+      // 「・**見出し:** 内容」形式を「*見出し:* 内容」形式に変換
+      const formattedLine = line.replace(/・\*\*(.+?):\*\*/, '*$1:*');
+      formattedLines.push(formattedLine);
+    } else {
+      // それ以外の行はそのまま
+      formattedLines.push(line);
+    }
+  }
+  
+  return formattedLines.join('\n');
+}
 
 // --- デバッグ用関数 ---
 /**
@@ -264,8 +286,9 @@ function testSpecificEmail() {
 
    try {
        const geminiResult = callGeminiApi(originalBody);
-       Logger.log(`Gemini Result: ${JSON.stringify(geminiResult)}`); // 結果をログに出力
-
+      //  Logger.log(`Gemini Result: ${JSON.stringify(geminiResult)}`); // 結果をログに出力
+       Logger.log(`Gemini Result translation: ${JSON.stringify(geminiResult.translation)}`);
+       Logger.log(`Gemini Result summary: ${JSON.stringify(geminiResult.summary)}`);
        if (geminiResult && geminiResult.translation && geminiResult.summary) {
            // Slack投稿（テストではコメントアウトしても良い）
            
