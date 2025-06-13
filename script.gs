@@ -14,7 +14,7 @@ const CONFIG = {
 
 // API関連の定数
 const API = {
-  GEMINI_ENDPOINT: `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${CONFIG.GEMINI_API_KEY}`,
+  GEMINI_ENDPOINT: `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro-preview-06-05:generateContent?key=${CONFIG.GEMINI_API_KEY}`,
   SLACK_ENDPOINT: 'https://slack.com/api/chat.postMessage'
 };
 
@@ -23,7 +23,7 @@ const API = {
  */
 function processEmailToSlack() {
   // 検索条件: 指定送信元から、昨日以降の未読メール
-  const query = `is:unread from:${CONFIG.SENDER_EMAIL} after:${getFormattedDateYesterday()}`;
+  const query = `is:unread from:${CONFIG.SENDER_EMAIL} before:${getFormattedDateToday()}`;
   Logger.log(`メール検索クエリ: ${query}`);
 
   const threads = GmailApp.search(query);
@@ -91,7 +91,7 @@ function processMessage(message) {
 function postContentToSlack(message, processedContent, originalBody) {
   const date = message.getDate().toLocaleDateString('ja-JP');
   const mainPost = postToSlack(
-    `【新着IT動向メールマガジン要約 (${date})】\n${processedContent.summary}`,
+    `【Benedict's Newsletter (${date})】\n${processedContent.summary}`,
     CONFIG.SLACK_CHANNEL
   );
 
@@ -143,8 +143,9 @@ function callGeminiApi(textToProcess) {
 2. そしてメールマガジン内にURLがあった場合は取り除いてください。
 3. 次に、翻訳した内容に基づいて、メールマガジンに含まれる複数の主要なトピックを特定し、それぞれのトピックについて最も重要なポイントを日本語で数行ずつ（全体で300文字程度を目安に）要約してください。
 4. 要約は箇条書き形式で、各要点の見出しは Slack 向けのマークアップで *見出し:* という形式にしてください（アスタリスク1つで囲む）。例：「*AI開発の進展:* AIモデルが急速に進歩しています」
-5. 各トピックの間には空白行を入れて見やすくしてください。
-6. 最後に、以下のJSON形式（マークダウン記法なしの純粋なJSON）で、翻訳結果と要約結果のみを返してください。
+5. 翻訳結果に関しても同様にSlack向けのマークアップで出力してSlack上で各話題が見やすいようにしてください。
+6. 各トピックの間には空白行を入れて見やすくしてください。
+7. 最後に、以下のJSON形式（マークダウン記法なしの純粋なJSON）で、翻訳結果と要約結果のみを返してください。
 
 \`\`\`json
 {
@@ -277,12 +278,11 @@ function postToSlack(text, channel, threadTs = null) {
  * 昨日の日付を 'YYYY/MM/DD' 形式で取得
  * @return {string} フォーマットされた日付
  */
-function getFormattedDateYesterday() {
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const year = yesterday.getFullYear();
-  const month = ('0' + (yesterday.getMonth() + 1)).slice(-2);
-  const day = ('0' + yesterday.getDate()).slice(-2);
+function getFormattedDateToday() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = ('0' + (today.getMonth() + 1)).slice(-2);
+  const day = ('0' + today.getDate()).slice(-2);
   return `${year}/${month}/${day}`;
 }
 
