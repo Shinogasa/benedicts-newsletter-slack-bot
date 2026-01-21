@@ -9,12 +9,12 @@ const CONFIG = {
   GEMINI_API_KEY: SCRIPT_PROPERTIES.getProperty('GEMINI_API_KEY'),
   SLACK_API_TOKEN: SCRIPT_PROPERTIES.getProperty('SLACK_API_TOKEN'),
   SENDER_EMAIL: 'list@ben-evans.com',
-  SLACK_CHANNEL: SCRIPT_PROPERTIES.getProperty('YOUR_SLACK_CHANNEL_ID')
+  SLACK_CHANNEL: SCRIPT_PROPERTIES.getProperty('SLACK_CHANNEL_ID')
 };
 
 // API関連の定数
 const API = {
-  GEMINI_ENDPOINT: `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro-preview-06-05:generateContent?key=${CONFIG.GEMINI_API_KEY}`,
+  GEMINI_ENDPOINT: `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${CONFIG.GEMINI_API_KEY}`,
   SLACK_ENDPOINT: 'https://slack.com/api/chat.postMessage'
 };
 
@@ -89,9 +89,9 @@ function processMessage(message) {
  * @param {string} originalBody - 元のメール本文
  */
 function postContentToSlack(message, processedContent, originalBody) {
-  const date = message.getDate().toLocaleDateString('ja-JP');
+  const subject = message.getSubject();
   const mainPost = postToSlack(
-    `【Benedict's Newsletter (${date})】\n${processedContent.summary}`,
+    subject,
     CONFIG.SLACK_CHANNEL
   );
 
@@ -100,10 +100,15 @@ function postContentToSlack(message, processedContent, originalBody) {
     return;
   }
 
-  // スレッドに翻訳と原文を投稿（スレッドIDが取得できた場合のみ）
+  // スレッドに要約と翻訳を投稿（スレッドIDが取得できた場合のみ）
   if (mainPost.ts) {
-    const threadMessage = `【日本語全文訳】\n${processedContent.translation}\n\n---\n\n【Original English Text】\n${originalBody}`;
-    postToSlack(threadMessage, CONFIG.SLACK_CHANNEL, mainPost.ts);
+    // 1つ目のスレッド投稿: 投稿の要約(日本語)
+    const summaryMessage = `【要約】\n${processedContent.summary}`;
+    postToSlack(summaryMessage, CONFIG.SLACK_CHANNEL, mainPost.ts);
+
+    // 2つ目のスレッド投稿: 全文の日本語訳
+    const translationMessage = `【日本語全文訳】\n${processedContent.translation}`;
+    postToSlack(translationMessage, CONFIG.SLACK_CHANNEL, mainPost.ts);
   } else {
     Logger.log('スレッドIDが取得できなかったため、スレッド投稿をスキップします');
   }
@@ -328,14 +333,18 @@ function testSpecificEmail() {
     Logger.log('翻訳と要約の取得に成功しました');
     
     // Slack投稿テスト
+    const subject = message.getSubject();
     const postResult = postToSlack(
-      `【テスト要約】\n${geminiResult.summary}`,
+      subject,
       CONFIG.SLACK_CHANNEL
     );
-    
+
     if (postResult && postResult.ok && postResult.ts) {
-      const threadMessage = `【テスト日本語訳】\n${geminiResult.translation}\n\n---\n\n【テスト原文】\n${originalBody}`;
-      postToSlack(threadMessage, CONFIG.SLACK_CHANNEL, postResult.ts);
+      const summaryMessage = `【テスト要約】\n${geminiResult.summary}`;
+      postToSlack(summaryMessage, CONFIG.SLACK_CHANNEL, postResult.ts);
+
+      const translationMessage = `【テスト日本語訳】\n${geminiResult.translation}`;
+      postToSlack(translationMessage, CONFIG.SLACK_CHANNEL, postResult.ts);
       Logger.log('Slackへのテスト投稿に成功しました');
     } else {
       Logger.log(`Slackへのテスト投稿に問題がありました: ${JSON.stringify(postResult)}`);
