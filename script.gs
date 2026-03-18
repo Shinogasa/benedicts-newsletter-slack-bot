@@ -49,6 +49,23 @@ function processEmailToSlack() {
 }
 
 /**
+ * メール本文からPR・スポンサー記事を除去し、本編のみを返す
+ * Benedict's Newsletterでは「** My work」以前がスポンサー記事にあたる
+ * @param {string} body - メールのプレーンテキスト本文
+ * @return {string} スポンサー記事を除去した本文
+ */
+function removeSponsoredContent(body) {
+  const marker = '** My work';
+  const index = body.indexOf(marker);
+  if (index !== -1) {
+    Logger.log('スポンサー記事を除去しました');
+    return body.substring(index);
+  }
+  Logger.log('スポンサー記事のマーカーが見つからなかったため、本文をそのまま使用します');
+  return body;
+}
+
+/**
  * 個別のメッセージを処理する
  * @param {GmailMessage} message - 処理するメールメッセージ
  */
@@ -61,9 +78,12 @@ function processMessage(message) {
     return;
   }
 
+  // PR・スポンサー記事を除去して本編のみ抽出
+  const contentBody = removeSponsoredContent(originalBody);
+
   try {
     // 翻訳と要約を取得
-    const processedContent = getTranslationAndSummary(originalBody);
+    const processedContent = getTranslationAndSummary(contentBody);
     
     if (!processedContent) {
       Logger.log(`翻訳・要約の取得に失敗しました: ${message.getSubject()}`);
@@ -322,8 +342,11 @@ function testSpecificEmail() {
     return;
   }
 
+  // PR・スポンサー記事を除去
+  const contentBody = removeSponsoredContent(originalBody);
+
   try {
-    const geminiResult = callGeminiApi(originalBody);
+    const geminiResult = callGeminiApi(contentBody);
     
     if (!geminiResult) {
       Logger.log('Gemini APIからの結果取得に失敗しました');
