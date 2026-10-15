@@ -2,6 +2,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const {
   buildSearchQuery,
+  removeSponsoredContent,
   processMessage,
   processThreads,
 } = require('../src/processor.gs');
@@ -63,6 +64,30 @@ test('検索クエリは送信元と、ゼロ埋めした今日の日付を含�
   const query = buildSearchQuery('list@example.com', new Date(2026, 0, 5));
 
   assert.equal(query, 'is:unread from:list@example.com before:2026/01/05');
+});
+
+test('「** My work」より前のスポンサー記事を除く', () => {
+  const body = 'Sponsored: buy this\n\n** My work\nThe real content';
+
+  assert.equal(removeSponsoredContent(body), '** My work\nThe real content');
+});
+
+test('マーカーが無ければ本文をそのまま返す', () => {
+  assert.equal(removeSponsoredContent('No marker here'), 'No marker here');
+});
+
+test('Geminiにはスポンサー記事を除いた本文を渡す', () => {
+  const received = [];
+  const gemini = {
+    translateAndSummarize: (text) => {
+      received.push(text);
+      return { translation: '全文訳', summary: '要約' };
+    },
+  };
+
+  processMessage(fakeMessage({ body: 'Ad\n** My work\nContent' }), deps({ gemini }));
+
+  assert.deepEqual(received, ['** My work\nContent']);
 });
 
 test('3件とも投稿できたら既読にする', () => {
