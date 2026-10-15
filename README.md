@@ -90,7 +90,7 @@ Slackへは実際に投稿されるが、メールは既読にしない
 
 トリガーは [triggers.gs](./src/triggers.gs) で管理する。`processEmailToSlack` を毎週水曜の9時台（`appsscript.json` の `timeZone`、Asia/Tokyo）に実行する。
 
-- 初回とスケジュールを変えたときは、`clasp push` の後にエディタで `setupTriggers` を1回実行する。pushだけではトリガーは変わらない
+- 初回と、スケジュールを変えたときは、`clasp push` の後にエディタで `setupTriggers` を1回実行する。pushだけではトリガーは変わらない
 - `setupTriggers` は `processEmailToSlack` の既存トリガーを消してから作り直すので、何度実行しても重複しない
 - エラー通知の頻度はコードで設定できない。作成後にエディタの「トリガー」画面で確認する
 
