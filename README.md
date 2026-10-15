@@ -68,7 +68,7 @@ OAuth & Permissions > Scopes より Bot Token Scopes で chat:write をつけ、
 GASは全ファイルを1つのグローバルスコープで読み込むので、ファイルの順番は問わない。
 ただし、別のファイルと同じ名前の関数や定数を作るとエラーになる
 
-#### clasp でデプロイする場合
+#### claspでデプロイする場合
 
 貼り付けの代わりに [clasp](https://github.com/google/clasp) で `src/` を丸ごと反映できる。
 
@@ -76,10 +76,10 @@ GASは全ファイルを1つのグローバルスコープで読み込むので�
 2. `npx @google/clasp login`
 3. このリポジトリの直下で `npx @google/clasp clone-script <スクリプトID> --rootDir src` を実行し、`.clasp.json` を作る。
    スクリプトIDはエディタの「プロジェクトの設定」にある（URLを渡すと `Invalid script ID` になる）。
-   clone で落ちてくる `src/コード.js` は削除する
+   cloneで作られる `src/コード.js` は削除する
 4. `npx @google/clasp push` で反映する
 
-`.clasp.json` は各自の環境に依存するので、git では管理しない。`src/appsscript.json`（タイムゾーンなどのマニフェスト）は管理する
+`.clasp.json` は各自の環境に依存するので、gitでは管理しない。`src/appsscript.json`（タイムゾーンなどのマニフェスト）は管理する
 
 ### 4. テスト
 
@@ -96,11 +96,11 @@ Slackへは実際に投稿されるが、メールは既読にしない
 
 ## Development
 
-GASのAPIに触れる部分は `src/main.gs` だけにまとめ、それ以外は Node.js の標準テストランナーでテストできる。
+GASのAPIを使う部分は `src/main.gs` だけにまとめ、それ以外はNode.jsの標準テストランナーでテストできる。
 依存パッケージは無い。
 
 ```sh
 npm test
 ```
 
-`test/main.test.js` は `src/*.gs` をGASと同じく1つのグローバルスコープに読み込み、偽のGAS APIで配線を確かめる
+`test/main.test.js` は `src/*.gs` をGASと同じく1つのグローバルスコープに読み込み、偽のGAS APIを使って、`main.gs` から各処理までの呼び出しがつながっていることと、ファイル間で関数名や定数名が衝突していないことを確かめる

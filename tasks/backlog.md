@@ -4,7 +4,7 @@
 
 `generationConfig.responseMimeType` と `responseSchema` を使い、プロンプトでJSONを頼む方式とコードフェンス除去をやめる。
 
-- 決めること: なし。着手の前提として、generateContent の REST で使うフィールド名と型の書き方（`OBJECT` か `object` か）を一次ドキュメントで確認する。2026-10-15 の時点では、ページが途中で切れていて確認できなかった
+- 決めること: なし。着手の前提として、generateContentのRESTで使うフィールド名と型の書き方（`OBJECT` か `object` か）を一次ドキュメントで確認する。2026-10-15の時点では、ページが途中で切れていて確認できなかった
 
 ## 毎回失敗するメールの扱い
 
@@ -16,12 +16,12 @@
 
 手元からの `clasp push` は導入済み（2026-10-15）。
 
-- 決めること: GitHub Actions で main へのマージ時に push するところまで進めるか（clasp の認証情報をリポジトリの secret に置くことになる）
+- 決めること: GitHub Actionsでmainへのマージ時にpushするところまで進めるか（claspの認証情報をリポジトリのsecretに置くことになる）
 
-## security-reviewer の Low 指摘（2026-10-15）
+## security-reviewerのLow指摘（2026-10-15）
 
 - 送信元の確認が検索クエリの `from:` だけ。`message.getFrom()` の厳密一致も確かめるか
 - Geminiのエラー時に、レスポンス本文の先頭500文字を例外メッセージ（＝失敗通知メール）に載せている。`error.status` と `error.message` だけに絞るか
 - 失敗通知とログにメール件名をそのまま載せている。長さを制限するか
 
-- 決めること: どれも実害は小さいので、まとめて1つのPRで直すか見送るか
+- 決めること: どれも実際の影響は小さいので、まとめて1つのPRで直すか見送るか
