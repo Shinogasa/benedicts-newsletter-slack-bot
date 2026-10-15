@@ -20,7 +20,22 @@ test('親投稿は thread_ts を付けずに送り、ts を返す', () => {
   assert.deepEqual(result, { ts: '111.222' });
   assert.equal(calls[0].url, 'https://slack.com/api/chat.postMessage');
   assert.equal(calls[0].options.headers.Authorization, 'Bearer xoxb-token');
-  assert.deepEqual(calls[0].payload, { channel: 'C123', text: '件名', link_names: true });
+  assert.deepEqual(calls[0].payload, { channel: 'C123', text: '件名' });
+});
+
+test('メールやLLM出力の制御文字をエスケープし、メンションやリンクに展開させない', () => {
+  const { fetch, calls } = recordingFetch({ ok: true, ts: '1.0' });
+
+  createSlackClient(fetch, 'token', 'C123').post('<!channel> A&B <https://evil|ok> *見出し:*');
+
+  assert.equal(calls[0].payload.text, '&lt;!channel&gt; A&amp;B &lt;https://evil|ok&gt; *見出し:*');
+  assert.equal('link_names' in calls[0].payload, false);
+});
+
+test('ok:true でも ts が無ければ例外にする', () => {
+  const { fetch } = recordingFetch({ ok: true });
+
+  assert.throws(() => createSlackClient(fetch, 'token', 'C123').post('件名'), /ts/);
 });
 
 test('スレッド投稿は thread_ts を付ける', () => {
