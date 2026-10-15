@@ -27,7 +27,7 @@ Benedict's Newsletterを翻訳+要約してSlackへ投稿するGoogle App Script
 
 ### 翻訳・要約機能
 
-- **翻訳**: Gemini 2.5 Flashを使用して英語メールを自然な日本語に翻訳
+- **翻訳**: Gemini 3.8 Flashを使用して英語メールを自然な日本語に翻訳
 - **要約**: 複数のトピックを特定し、各トピックの重要ポイントを抽出
 - **マークアップ**: Slack形式で見やすく整形
 
@@ -55,8 +55,52 @@ OAuth & Permissions > Scopes より Bot Token Scopes で chat:write をつけ、
 |SLACK_API_TOKEN|2で作成したOAuthトークン|
 |SLACK_CHANNEL_ID|投稿したいスラックチャンネルのID|
 
-保存したらエディタへ[スクリプト](./script.gs)を貼り付け
+保存したら、エディタで `src/` 配下の各ファイルと同じ名前のスクリプトファイルを作り、中身を貼り付ける
+
+|ファイル|役割|
+|---|---|
+|[main.gs](./src/main.gs)|GASから実行するエントリポイント（`processEmailToSlack` / `testSpecificEmail`）|
+|[processor.gs](./src/processor.gs)|メール1通の処理と、既読にする条件|
+|[gemini.gs](./src/gemini.gs)|Gemini APIでの翻訳・要約|
+|[slack.gs](./src/slack.gs)|Slackへの投稿と削除|
+|[config.gs](./src/config.gs)|スクリプトプロパティの読み込みと検証|
+
+GASは全ファイルを1つのグローバルスコープで読み込むので、ファイルの順番は問わない。
+ただし、別のファイルと同じ名前の関数や定数を作るとエラーになる
+
+#### claspでデプロイする場合
+
+貼り付けの代わりに [clasp](https://github.com/google/clasp) で `src/` を丸ごと反映できる。
+
+1. https://script.google.com/home/usersettings で「Google Apps Script API」をオンにする
+2. `npx @google/clasp login`
+3. このリポジトリの直下で `npx @google/clasp clone-script <スクリプトID> --rootDir src` を実行し、`.clasp.json` を作る。
+   スクリプトIDはエディタの「プロジェクトの設定」にある（URLを渡すと `Invalid script ID` になる）。
+   cloneで作られる `src/コード.js` は削除する
+4. `npx @google/clasp push` で反映する
+
+`.clasp.json` は各自の環境に依存するので、gitでは管理しない。`src/appsscript.json`（タイムゾーンなどのマニフェスト）は管理する
 
 ### 4. テスト
 
-プルダウンからtestSpecificEmailを選択して実行するとテストが実行される
+プルダウンから `testSpecificEmail` を選択して実行すると、`src/main.gs` の `TEST_EMAIL_SUBJECT` の件名のメールを1通処理する。
+Slackへは実際に投稿されるが、メールは既読にしない
+
+### 5. トリガーの設定
+
+`processEmailToSlack` を時間主導型トリガーで定期実行する。
+
+- 3件の投稿（親・要約・全文訳）がすべて成功したメールだけを既読にする
+- 要約か全文訳の投稿に失敗したら、親投稿を削除し、メールは未読のまま残す。次回の実行で最初からやり直す
+- 1通でも失敗すると実行の最後に例外を投げるので、GASのトリガー失敗通知メールが届く
+
+## Development
+
+GASのAPIを使う部分は `src/main.gs` だけにまとめ、それ以外はNode.jsの標準テストランナーでテストできる。
+依存パッケージは無い。
+
+```sh
+npm test
+```
+
+`test/main.test.js` は `src/*.gs` をGASと同じく1つのグローバルスコープに読み込み、偽のGAS APIを使って、`main.gs` から各処理までの呼び出しがつながっていることと、ファイル間で関数名や定数名が衝突していないことを確かめる
