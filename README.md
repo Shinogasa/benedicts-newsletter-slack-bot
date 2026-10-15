@@ -68,6 +68,19 @@ OAuth & Permissions > Scopes より Bot Token Scopes で chat:write をつけ、
 GASは全ファイルを1つのグローバルスコープで読み込むので、ファイルの順番は問わない。
 ただし、別のファイルと同じ名前の関数や定数を作るとエラーになる
 
+#### clasp でデプロイする場合
+
+貼り付けの代わりに [clasp](https://github.com/google/clasp) で `src/` を丸ごと反映できる。
+
+1. https://script.google.com/home/usersettings で「Google Apps Script API」をオンにする
+2. `npx @google/clasp login`
+3. このリポジトリの直下で `npx @google/clasp clone-script <スクリプトID> --rootDir src` を実行し、`.clasp.json` を作る。
+   スクリプトIDはエディタの「プロジェクトの設定」にある（URLを渡すと `Invalid script ID` になる）。
+   clone で落ちてくる `src/コード.js` は削除する
+4. `npx @google/clasp push` で反映する
+
+`.clasp.json` は各自の環境に依存するので、git では管理しない。`src/appsscript.json`（タイムゾーンなどのマニフェスト）は管理する
+
 ### 4. テスト
 
 プルダウンから `testSpecificEmail` を選択して実行すると、`src/main.gs` の `TEST_EMAIL_SUBJECT` の件名のメールを1通処理する。
