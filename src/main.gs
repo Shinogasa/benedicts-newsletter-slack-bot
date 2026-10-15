@@ -13,12 +13,13 @@ const TEST_EMAIL_SUBJECT = "Benedict's Newsletter: No. 585";
 function createDeps() {
   const config = loadConfig((key) => PropertiesService.getScriptProperties().getProperty(key));
   const fetch = (url, options) => UrlFetchApp.fetch(url, options);
+  const sleep = (ms) => Utilities.sleep(ms);
   return {
     config,
-    gemini: createGeminiClient(fetch, config.geminiApiKey),
+    gemini: createGeminiClient(fetch, config.geminiApiKey, { sleep }),
     slack: createSlackClient(fetch, config.slackApiToken, config.slackChannelId),
     log: (message) => Logger.log(message),
-    sleep: (ms) => Utilities.sleep(ms),
+    sleep,
   };
 }
 

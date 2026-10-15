@@ -103,16 +103,35 @@ function parseGeminiResponse(responseCode, responseBody) {
   return { translation: result.translation, summary: result.summary };
 }
 
+// 混雑（503）とレート制限（429）は時間を置けば通ることが多いので、再試行する
+const GEMINI_RETRYABLE_CODES = [429, 503];
+const GEMINI_MAX_RETRIES = 3;
+const GEMINI_RETRY_BASE_DELAY_MS = 2000;
+const GEMINI_RETRY_MAX_JITTER_MS = 1000;
+
 /**
  * Geminiクライアントを作る
  * @param {function(string, Object): {getResponseCode: function(): number, getContentText: function(): string}} fetch
  * @param {string} apiKey
+ * @param {{sleep?: function(number), random?: function(): number}} [retry] - 再試行の待機と揺らぎ
  */
-function createGeminiClient(fetch, apiKey) {
+function createGeminiClient(fetch, apiKey, retry = {}) {
+  const {
+    sleep = () => { throw new Error('Geminiの再試行に sleep が渡されていません'); },
+    random = Math.random,
+  } = retry;
+
   return {
     translateAndSummarize(newsletterText) {
       const { url, options } = buildGeminiRequest(apiKey, newsletterText);
-      const response = fetch(url, options);
+      let response = fetch(url, options);
+      for (let attempt = 0;
+        attempt < GEMINI_MAX_RETRIES && GEMINI_RETRYABLE_CODES.includes(response.getResponseCode());
+        attempt++) {
+        // 指数バックオフ（2秒, 4秒, 8秒）に揺らぎを足し、同時に再試行が集中するのを避ける
+        sleep(GEMINI_RETRY_BASE_DELAY_MS * 2 ** attempt + random() * GEMINI_RETRY_MAX_JITTER_MS);
+        response = fetch(url, options);
+      }
       return parseGeminiResponse(response.getResponseCode(), response.getContentText());
     },
   };
