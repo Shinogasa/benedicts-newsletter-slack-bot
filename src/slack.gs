@@ -6,6 +6,16 @@
 const SLACK_API_BASE = 'https://slack.com/api/';
 
 /**
+ * Slackの制御文字（&, <, >）をエスケープする
+ * 件名やLLM出力に <!channel> や <URL|表示名> が入っても、通知やリンクに展開させない
+ * @param {string} text
+ * @return {string}
+ */
+function escapeSlackText(text) {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/**
  * Slackクライアントを作る
  * @param {function(string, Object): {getContentText: function(): string}} fetch
  * @param {string} token - Bot User OAuth Token
@@ -38,11 +48,15 @@ function createSlackClient(fetch, token, channel) {
      * @return {{ts: string}}
      */
     post(text, threadTs) {
-      const payload = { channel, text, link_names: true };
+      const payload = { channel, text: escapeSlackText(text) };
       if (threadTs) {
         payload.thread_ts = threadTs;
       }
-      return { ts: call('chat.postMessage', payload).ts };
+      const { ts } = call('chat.postMessage', payload);
+      if (!ts) {
+        throw new Error('Slack chat.postMessage の応答に ts がありません');
+      }
+      return { ts };
     },
 
     /**
