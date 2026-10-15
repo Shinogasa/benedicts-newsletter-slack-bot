@@ -4,7 +4,7 @@
  */
 
 const GEMINI_ENDPOINT =
-  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+  'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent';
 
 // エラーメッセージに載せるレスポンス本文の上限
 const GEMINI_ERROR_BODY_LIMIT = 500;
