@@ -55,8 +55,39 @@ OAuth & Permissions > Scopes より Bot Token Scopes で chat:write をつけ、
 |SLACK_API_TOKEN|2で作成したOAuthトークン|
 |SLACK_CHANNEL_ID|投稿したいスラックチャンネルのID|
 
-保存したらエディタへ[スクリプト](./script.gs)を貼り付け
+保存したら、エディタで `src/` 配下の各ファイルと同じ名前のスクリプトファイルを作り、中身を貼り付ける
+
+|ファイル|役割|
+|---|---|
+|[main.gs](./src/main.gs)|GASから実行するエントリポイント（`processEmailToSlack` / `testSpecificEmail`）|
+|[processor.gs](./src/processor.gs)|メール1通の処理と、既読にする条件|
+|[gemini.gs](./src/gemini.gs)|Gemini APIでの翻訳・要約|
+|[slack.gs](./src/slack.gs)|Slackへの投稿と削除|
+|[config.gs](./src/config.gs)|スクリプトプロパティの読み込みと検証|
+
+GASは全ファイルを1つのグローバルスコープで読み込むので、ファイルの順番は問わない。
+ただし、別のファイルと同じ名前の関数や定数を作るとエラーになる
 
 ### 4. テスト
 
-プルダウンからtestSpecificEmailを選択して実行するとテストが実行される
+プルダウンから `testSpecificEmail` を選択して実行すると、`src/main.gs` の `TEST_EMAIL_SUBJECT` の件名のメールを1通処理する。
+Slackへは実際に投稿されるが、メールは既読にしない
+
+### 5. トリガーの設定
+
+`processEmailToSlack` を時間主導型トリガーで定期実行する。
+
+- 3件の投稿（親・要約・全文訳）がすべて成功したメールだけを既読にする
+- 要約か全文訳の投稿に失敗したら、親投稿を削除し、メールは未読のまま残す。次回の実行で最初からやり直す
+- 1通でも失敗すると実行の最後に例外を投げるので、GASのトリガー失敗通知メールが届く
+
+## Development
+
+GASのAPIに触れる部分は `src/main.gs` だけにまとめ、それ以外は Node.js の標準テストランナーでテストできる。
+依存パッケージは無い。
+
+```sh
+npm test
+```
+
+`test/main.test.js` は `src/*.gs` をGASと同じく1つのグローバルスコープに読み込み、偽のGAS APIで配線を確かめる
