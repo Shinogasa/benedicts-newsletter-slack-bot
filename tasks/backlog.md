@@ -14,9 +14,9 @@
 
 ## デプロイの自動化
 
-貼り付けによるデプロイをやめる。
+手元からの `clasp push` は導入済み（2026-10-15）。
 
-- 決めること: clasp で手元から push するか。さらに、GitHub Actions で main へのマージ時に push するところまで進めるか（clasp の認証情報をリポジトリの secret に置くことになる）
+- 決めること: GitHub Actions で main へのマージ時に push するところまで進めるか（clasp の認証情報をリポジトリの secret に置くことになる）
 
 ## security-reviewer の Low 指摘（2026-10-15）
 
