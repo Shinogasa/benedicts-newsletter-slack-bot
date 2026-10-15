@@ -30,6 +30,20 @@ function buildSearchQuery(senderEmail, today) {
   return `is:unread from:${senderEmail} before:${formatGmailDate(today)}`;
 }
 
+// Benedict's Newsletterでは、このマーカーより前がPR・スポンサー記事にあたる
+const SPONSORED_CONTENT_END_MARKER = '** My work';
+
+/**
+ * メール本文からPR・スポンサー記事を除き、本編だけを返す
+ * マーカーが無ければ本文をそのまま返す
+ * @param {string} body
+ * @return {string}
+ */
+function removeSponsoredContent(body) {
+  const index = body.indexOf(SPONSORED_CONTENT_END_MARKER);
+  return index === -1 ? body : body.substring(index);
+}
+
 /**
  * スレッド投稿に失敗したとき、親投稿を消して重複を防ぐ
  * 削除の失敗はログに残すだけにし、呼び出し元では元の投稿エラーを優先する
@@ -60,7 +74,12 @@ function processMessage(message, deps, options = {}) {
     throw new Error('メール本文が取得できませんでした');
   }
 
-  const { translation, summary } = gemini.translateAndSummarize(body);
+  const content = removeSponsoredContent(body);
+  log(content === body
+    ? 'スポンサー記事のマーカーが見つからなかったため、本文をそのまま使用します'
+    : 'スポンサー記事を除去しました');
+
+  const { translation, summary } = gemini.translateAndSummarize(content);
 
   const parent = slack.post(subject);
   try {
@@ -104,5 +123,5 @@ function processThreads(threads, deps) {
 
 // GASには module が無い。Node のテストから読み込むときだけ公開する
 if (typeof module !== 'undefined') {
-  module.exports = { buildSearchQuery, processMessage, processThreads };
+  module.exports = { buildSearchQuery, removeSponsoredContent, processMessage, processThreads };
 }
