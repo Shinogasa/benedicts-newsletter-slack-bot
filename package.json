@@ -2,6 +2,6 @@
   "name": "benedicts-newsletter-slack-bot",
   "private": true,
   "scripts": {
-    "test": "node --test test/"
+    "test": "node --test"
   }
 }
